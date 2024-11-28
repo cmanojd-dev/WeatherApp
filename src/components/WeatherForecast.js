@@ -6,6 +6,7 @@ import {
   Image,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -13,25 +14,82 @@ import {
 import {useDispatch, useSelector} from 'react-redux';
 import {COLORS} from '../Assets/theme/COLOR';
 import {request_weather_data} from '../Redux/Actions/publicDataActions';
-import {getWeatherIcon} from '../utils';
+import {
+  celciusToFahrenheit,
+  findLocation,
+  getWeatherIcon,
+  requestLocationPermission,
+} from '../utils';
 import CityInfo from './CityInfo';
 import CurrentWeather from './CurrentWeather';
 import HourlyInfo from './HourlyInfo';
+import {toggleTemperatureUnit} from '../Redux/Actions/temperatureSwitchActions';
+import Geolocation from 'react-native-geolocation-service';
+import {languages, mergedCities} from '../Assets/theme/appDataConfig';
+import {Dropdown} from 'react-native-element-dropdown';
+import DropDownPicker from './DropDownPicker';
+import config from '../config';
+
 const windowWidth = Dimensions.get('window').width;
 
 const WeatherForecast = () => {
-  const [selectedCity, setSelectedCity] = useState('Surat');
+  const [loading, setLoading] = useState(true);
+  const [selectedCity, setSelectedCity] = useState('Ahmedabad');
   const [selectedState, setSelectedState] = useState('Gujarat');
   const [selectedDayDate, setSelectedDayDate] = useState(
     new Date().toISOString().split('T')[0],
   );
   const {weather_data, weather_loading} = useSelector(state => state.params);
-  console.log('\n\n Weather Data\n\n', weather_data);
+  const isCelcius = useSelector(state => state.temperatureReducer?.isCelcius);
   const dispatch = useDispatch();
+  const [isEnabled, setIsEnabled] = useState(isCelcius);
+  const [location, setLocation] = useState({latitude: '', longitude: ''});
+  const [isFocus, setIsFocus] = useState(false);
+  const [language, setLanguage] = useState(languages?.[0]?.value);
+
+  const toggleSwitch = () => {
+    setIsEnabled(previousState => !previousState);
+    dispatch(toggleTemperatureUnit());
+  };
 
   useEffect(() => {
-    dispatch(request_weather_data(selectedCity));
+    dispatch(request_weather_data({language, ...location, selectedCity}));
+  }, [selectedCity, location, language]);
+
+  useEffect(() => {
+    getLocation();
   }, []);
+
+  const getLocation = async () => {
+    const result = await requestLocationPermission();
+    if (result) {
+      Geolocation.getCurrentPosition(
+        async position => {
+          console.log(position);
+          const {latitude, longitude} = position?.coords;
+          if (latitude && longitude) {
+            setLocation({latitude: latitude, longitude: longitude});
+            try {
+              const response = await fetch(
+                `https://api.weatherapi.com/v1/current.json?key=${config.LOCATION_API_KEY}&q=${latitude},${longitude}`,
+              );
+              const json = await response.json();
+              setSelectedCity(json?.location?.name);
+              setSelectedState(json?.location?.region);
+            } catch (error) {
+              console.error(error.message);
+            }
+            setLoading(false);
+          }
+        },
+        error => {
+          console.log(error.code, error.message);
+          setLocation({latitude: '', longitude: ''});
+        },
+        {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+      );
+    }
+  };
 
   const renderCurrentWeatherCards = ({item}) => {
     const today = new Date();
@@ -76,7 +134,9 @@ const WeatherForecast = () => {
               ? {color: COLORS.light_shade}
               : {},
           ]}>
-          {item.temp}°C
+          {!isCelcius
+            ? `${item?.temp}°C`
+            : `${celciusToFahrenheit(item?.temp)}°F`}
         </Text>
       </TouchableOpacity>
     );
@@ -92,10 +152,46 @@ const WeatherForecast = () => {
   const getSelectedDay =
     weather_data?.days?.filter(a => a.datetime == selectedDayDate)?.[0] || [];
 
+  if (loading) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <ActivityIndicator size={'large'} />
+      </View>
+    );
+  }
+
   return (
     <View>
-      <CityInfo city={selectedCity} state={selectedState} />
-
+      <CityInfo
+        city={selectedCity}
+        state={selectedState}
+        setLocation={setLocation}
+        setSelectedCity={setSelectedCity}
+        setSelectedState={setSelectedState}
+      />
+      <View
+        style={{
+          alignItems: 'center',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          marginTop: 24,
+        }}>
+        <Text style={[styles.switchText, {paddingRight: 8}]}>°Celcius</Text>
+        <Switch
+          trackColor={{false: COLORS.switchOff, true: COLORS.switchOn}}
+          thumbColor={COLORS.switchThumb}
+          ios_backgroundColor="#3e3e3e"
+          onValueChange={toggleSwitch}
+          value={isEnabled}
+        />
+        <Text style={[styles.switchText, {paddingLeft: 8}]}>°Fahrenheit</Text>
+      </View>
+      <DropDownPicker
+        language={language}
+        setLanguage={setLanguage}
+        isFocus={isFocus}
+        setIsFocus={setIsFocus}
+      />
       <ScrollView>
         {weather_loading ? (
           <ActivityIndicator size={'small'} color={COLORS.primary} />
@@ -138,6 +234,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 12,
   },
+  dropdown: {
+    height: 50,
+    borderColor: 'gray',
+    borderWidth: 0.5,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+  },
   forecastTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -160,12 +263,30 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: 'bold',
   },
+  switchText: {
+    fontSize: 18,
+    color: COLORS.dark_shade,
+    fontWeight: 'bold',
+  },
   weatherCard: {
     margin: 10,
     padding: 10,
     backgroundColor: '#fff',
     borderRadius: 10,
     elevation: 8,
+  },
+  placeholderStyle: {
+    fontSize: 16,
+    color: COLORS.dark_shade,
+  },
+  selectedTextStyle: {
+    fontSize: 16,
+    color: COLORS.dark_shade,
+  },
+
+  inputSearchStyle: {
+    height: 40,
+    fontSize: 16,
   },
   forecastCard: {
     // width: (windowWidth * 0.4) / 2,

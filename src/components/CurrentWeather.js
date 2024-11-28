@@ -3,13 +3,16 @@ import React from 'react';
 import {COLORS} from '../Assets/theme/COLOR';
 import {AppImages} from '../Assets/Images';
 import LinearGradient from 'react-native-linear-gradient';
-import {getWeatherIcon} from '../utils';
+import {celciusToFahrenheit, getWeatherIcon} from '../utils';
+import {useSelector} from 'react-redux';
 const windowWidth = Dimensions.get('window').width;
 
 const CurrentWeather = ({currentWeather}) => {
   const currentDate = new Date();
 
   const currentTime = currentDate.toLocaleTimeString();
+  const isCelcius = useSelector(state => state.temperatureReducer?.isCelcius);
+
   return (
     // <View style={styles.currentWeatherContainer}>
     <LinearGradient
@@ -32,13 +35,22 @@ const CurrentWeather = ({currentWeather}) => {
           </View>
         </View>
         <View style={{marginTop: 12, width: '40%'}}>
-          <Text style={styles.todayTemp}>{currentWeather.temp}°C</Text>
+          <Text style={styles.todayTemp}>
+            {/* {currentWeather.temp}°C */}
+            {!isCelcius
+              ? `${currentWeather?.temp}°C`
+              : `${celciusToFahrenheit(currentWeather?.temp)}°F`}
+          </Text>
           <Text style={styles.feelsLike}>
-            Feel like {currentWeather.feelslike}
+            Feel like{' '}
+            {!isCelcius
+              ? `${currentWeather?.feelslike}°C`
+              : `${celciusToFahrenheit(currentWeather?.feelslike)}°F`}
           </Text>
           <Image source={AppImages.windWave} style={styles.windWavePng} />
         </View>
       </View>
+      <Text style={styles.description}>{currentWeather?.description}</Text>
       <View style={styles.extraInfoCard}>
         <View style={{alignItems: 'center'}}>
           <View style={styles.extraInfo}>
@@ -84,8 +96,8 @@ const styles = StyleSheet.create({
     // height: (windowWidth * 0.9) / 2,
   },
   currentWeatherIcon: {
-    height: (windowWidth * 0.65) / 2,
-    width: (windowWidth * 0.8) / 2,
+    height: (windowWidth * 0.45) / 2,
+    width: (windowWidth * 0.6) / 2,
     position: 'absolute',
     top: 5,
     left: 10,
@@ -104,21 +116,26 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   todayTemp: {
-    fontSize: 40,
+    fontSize: 30,
     fontWeight: 'bold',
     color: COLORS.light_shade,
     marginBottom: 8,
   },
   feelsLike: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.white,
     textTransform: 'capitalize',
     marginBottom: 6,
   },
+  description: {
+    fontSize: 14,
+    color: COLORS.white,
+    textTransform: 'capitalize',
+    marginTop: 8,
+  },
   windWavePng: {
     width: '60%',
     height: 40,
-    // backgroundColor: 'red'
   },
   extraInfoCard: {
     flexDirection: 'row',

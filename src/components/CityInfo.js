@@ -7,6 +7,7 @@ import {ChevronDownIcon} from 'react-native-heroicons/mini';
 import CitySelectorModal from './CitySelectorModal';
 
 const CityInfo = props => {
+  const {setSelectedCity, setSelectedState, setLocation} = props;
   const [showModal, setShowModal] = useState(false);
   const today = new Date();
   return (
@@ -31,6 +32,9 @@ const CityInfo = props => {
         <Image style={styles.cityInfoImage} source={AppImages.map} />
       </TouchableOpacity>
       <CitySelectorModal
+        setSelectedCity={setSelectedCity}
+        setSelectedState={setSelectedState}
+        setLocation={setLocation}
         visible={showModal}
         onClose={() => setShowModal(false)}
       />

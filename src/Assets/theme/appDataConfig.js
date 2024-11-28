@@ -160,3 +160,11 @@ export function getStateNameByCityId(cityId) {
     return '';
   }
 }
+
+export const mergedCities = Object.values(cities).flat();
+
+export const languages = [
+  {label: 'English', value: 'en'},
+  {label: 'Hindi', value: 'hi'},
+  {label: 'French', value: 'fr'},
+];

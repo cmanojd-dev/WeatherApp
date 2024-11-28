@@ -11,4 +11,7 @@ export const COLORS = {
   humidityText: '#FFEDD8',
   windSpeedText: '#211951',
   white: '#FFFFFF',
+  switchOff: '#767577',
+  switchOn: '#81b0ff',
+  switchThumb: '#f4f3f4',
 };

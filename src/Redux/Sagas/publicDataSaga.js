@@ -9,13 +9,18 @@ export function* watch_public_data_request() {
 
 function* request_weather_data(action) {
   try {
-    const response = yield call(
-      api.publicAPI,
-      action.payload.location +
-        '?unitGroup=metric&key=' +
-        Config.API_KEY +
-        '&contentType=json',
-    );
+    const {selectedCity, latitude, longitude, language} =
+      action.payload.location;
+    let endpoint;
+    if (latitude && longitude) {
+      endpoint = `${latitude},${longitude}?unitGroup=metric&key=${Config.API_KEY}&contentType=json&lang=${language}`;
+    } else if (selectedCity) {
+      endpoint = `${selectedCity}?unitGroup=metric&key=${Config.API_KEY}&contentType=json&lang=${language}`;
+    } else {
+      throw new Error('Invalid location data provided');
+    }
+    const response = yield call(api.publicAPI, endpoint);
+
     if (response.ok && response.data) {
       yield put(public_actions.success_weather_data(response.data));
     } else {
@@ -23,6 +28,6 @@ function* request_weather_data(action) {
     }
   } catch (error) {
     yield put(public_actions.failed_weather_data());
-    console.log(error);
+    console.error('Error fetching weather data:', error);
   }
 }

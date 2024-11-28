@@ -6,33 +6,62 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  TextInput,
   Dimensions,
 } from 'react-native';
 import {COLORS} from '../Assets/theme/COLOR';
-import {cities, states} from '../Assets/theme/appDataConfig';
+import {
+  cities,
+  getCitiesByState,
+  getStateNameByCityId,
+  states,
+} from '../Assets/theme/appDataConfig';
 const windowWidth = Dimensions.get('window').width;
 const windowHeight = Dimensions.get('window').height;
 
-const CitySelectorModal = ({visible, onClose}) => {
-  const renderStates = ({item}) => (
-    <View>
-      <Text style={styles.stateName}>{item.name}</Text>
-      <View style={styles.cityInfoContent}>
-        <FlatList
-          data={cities.filter(city => city.stateId === item.id)}
-          renderItem={renderCities}
-          keyExtractor={item => item.id.toString()}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
-    </View>
-  );
+const CitySelectorModal = ({
+  visible,
+  onClose,
+  setSelectedState,
+  setSelectedCity,
+  setLocation,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const renderCities = ({item}) => (
-    <TouchableOpacity onPress={() => {}}>
-      <Text style={styles.cityName}>{item.name}</Text>
-    </TouchableOpacity>
-  );
+  const renderStates = ({item}) => {
+    const cityList = getCitiesByState(item?.id);
+    const filteredCityList = cityList.filter(city =>
+      city.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+
+    return (
+      <View>
+        <Text style={styles.stateName}>{item.name}</Text>
+        <View style={styles.cityInfoContent}>
+          <FlatList
+            data={filteredCityList}
+            renderItem={renderCities}
+            keyExtractor={item => item.id.toString()}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  const renderCities = ({item}) => {
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          setSelectedState(getStateNameByCityId(item?.stateId));
+          setSelectedCity(item?.name);
+          setLocation({latitude: '', longitude: ''});
+        }}
+        key={item?.id}>
+        <Text style={styles.cityName}>{item?.name}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <Modal
@@ -43,6 +72,13 @@ const CitySelectorModal = ({visible, onClose}) => {
       <View style={styles.modalContent}>
         <View style={styles.regionInfoContent}>
           <Text style={styles.modalHeaderText}>Select Your State</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for a city"
+            value={searchQuery}
+            onChangeText={text => setSearchQuery(text)}
+            placeholderTextColor={COLORS.light_shade}
+          />
           <FlatList
             data={states}
             renderItem={renderStates}
@@ -80,6 +116,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     color: COLORS.primary,
+  },
+  searchInput: {
+    height: 40,
+    borderColor: COLORS.lightGray,
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    color: COLORS.dark_shade,
   },
   stateName: {
     fontSize: 16,
